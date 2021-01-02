@@ -1,1 +1,2 @@
-[[file:README.org][中文文档]]
+
+[[file:README_CN.org][中文文档]]
