@@ -14,7 +14,7 @@ Doom emacs 用户：
   )
 #+END_SRC
 * 使用
-主要功能就一个：在org-noter的文档视窗中执行 =org-noter-create-skeleton-list=，会在对应的笔记视窗的末尾插入当前文档的大纲列表。
+主要功能就一个：在org-noter的文档视窗中执行 =org-noter-create-skeleton-list= ，会在对应的笔记视窗的末尾插入当前文档的大纲列表。
 
 - 如果是PDF文档：插入PDF大纲，并在对应大纲位置下插入笔记。
   + 高亮、下划线、波浪线、删除线、文本笔记会导出为文本
@@ -31,4 +31,4 @@ Doom emacs 用户：
   + [[https://github.com/wasamasa/nov.el][nov.el]] : 用于提取epub大纲，打开nov链接
 * 配置
 - =org-noter-plus-image-dir= PDF笔记图片的存储目录
-- =org-noter-plus-pdf-link-prefix= PDF链接的前缀，默认为 ~pdf~，可按需修改为 ~pdfview~
+- =org-noter-plus-pdf-link-prefix= PDF链接的前缀，默认为 ~pdf~ ，可按需修改为 ~pdfview~
