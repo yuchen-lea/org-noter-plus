@@ -140,7 +140,8 @@
 ;;;;; nov follow link
 (defun org-noter-plus--follow-nov-link (path)
   "Follow nov link designated by PATH.
-When in org-noter, open the link in noter doc window."
+When in org-noter, open the link in noter doc window.
+Set this function for nov link after nov.el is loaded."
   (if (string-match "^\\(.*\\)::\\([0-9]+\\):\\([0-9]+\\)$" path)
       (let ((file (match-string 1 path))
             (index (string-to-number (match-string 2 path)))
@@ -171,10 +172,6 @@ When in org-noter, open the link in noter doc window."
         )
     (error "Invalid nov.el link")))
 
-;; TODO better load when load nov?
-(org-link-set-parameters
- "nov"
- :follow 'org-noter-plus--follow-nov-link)
 
 ;;;;; skeleton
 
