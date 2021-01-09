@@ -3,6 +3,7 @@
 ;; Author: Yuchen Li
 ;; Url: https://github.com/yuchen-lea/org-noter-plus
 
+;;; Commentary:
 ;;; License:
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -19,8 +20,15 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Code:
+;;;; Requirements
+(require 'org-noter)
 
-(require 'org)
+;;;; Customization
+
+(defgroup org-noter-plus nil
+  "Help you take notes of pdf and epub with org-noter."
+  :group 'org
+  :prefix "org-noter-plus-")
 
 (defcustom org-noter-plus-image-dir org-directory
   "The directory to save extracted square note images."
@@ -28,13 +36,14 @@
   )
 
 (defcustom org-noter-plus-pdf-link-prefix "pdf"
-  "Prefix for pdf link"
+  "Prefix for pdf link. Please keep consistent with `org-pdftools-link-prefix'"
   :type 'string
   )
 
-;;;; pdf info
-(defun pdf-skeletion-info (&optional file-or-buffer)
-  "return outline + annot"
+;;;; Commands
+;;;;; pdf info
+(defun org-noter-plus--pdf-skeletion-info (&optional file-or-buffer)
+  "Outline and annotations of given pdf file."
   (require 'pdf-tools)
   (require 'cl-seq)
   (let* ((outline (pdf-info-outline file-or-buffer))
@@ -69,11 +78,12 @@
            )
          )
        annots))
+    ;; sort by page number
     (cl-sort skeleton #'< :key (lambda (alist) (alist-get 'page alist))))
   )
 
-;;;; nov outline data
-(defun handle-toc-item (ol depth)
+;;;;; nov outline data
+(defun org-noter-plus--handle-nov-toc-item (ol depth)
   (mapcar (lambda (li)
             (mapcar (lambda (a-or-ol)
                       (pcase-exhaustive (dom-tag a-or-ol)
@@ -82,13 +92,13 @@
                                  :title (dom-text a-or-ol)
                                  :href (dom-attr a-or-ol 'href)))
                         ('ol
-                         (handle-toc-item a-or-ol
+                         (org-noter-plus--handle-nov-toc-item a-or-ol
                                           (1+ depth)))))
                     (dom-children li)))
           (dom-children ol)))
 
-(defun nov-outline-info ()
-  "Return outline."
+(defun org-noter-plus--nov-outline-info ()
+  "Epub outline with nov link."
   (require 'esxml)
   (require 'nov)
   (let* ((toc-path (cdr (aref nov-documents 0)))
@@ -106,7 +116,7 @@
     (nov--find-file nov-file-name 0 0)
     (setq nov-buffer (buffer-name))
     (dolist (item
-             (flatten-tree (handle-toc-item toc-tree 1))
+             (flatten-tree (org-noter-plus--handle-nov-toc-item toc-tree 1))
              )
       ;; TODO vector or alist?
       (let ((depth  (aref item 1))
@@ -127,9 +137,10 @@
     )
   )
 
-;;;; nov follow link
-(defun nov-org-link-follow-noter (path)
-  "Follow nov link designated by PATH."
+;;;;; nov follow link
+(defun org-noter-plus--follow-nov-link (path)
+  "Follow nov link designated by PATH.
+When in org-noter, open the link in noter doc window."
   (if (string-match "^\\(.*\\)::\\([0-9]+\\):\\([0-9]+\\)$" path)
       (let ((file (match-string 1 path))
             (index (string-to-number (match-string 2 path)))
@@ -160,17 +171,18 @@
         )
     (error "Invalid nov.el link")))
 
+;; TODO better load when load nov?
 (org-link-set-parameters
  "nov"
- :follow 'nov-org-link-follow-noter)
+ :follow 'org-noter-plus--follow-nov-link)
 
-;;;; skeleton
+;;;;; skeleton
 
-(defun org-noter-create-skeleton-list ()
+;;;###autoload
+(defun org-noter-plus-create-skeleton-list ()
   "Insert skeleton at the end of noter buffer.
-If noter doc is pdf: insert pdf outline with pdf annots,
+If noter doc is pdf: insert pdf outline with annotations,
 If noter doc is epub: insert epub outline (nov link)"
-  (require 'org-noter)
   (interactive)
   (org-noter--with-valid-session
    (let* ((doc-file (org-noter--session-property-text session))
@@ -181,7 +193,7 @@ If noter doc is epub: insert epub outline (nov link)"
       (
        ;; extract pdf outline with annotation
        (eq (org-noter--session-doc-mode session) 'pdf-view-mode)
-       (let* ((output-data (pdf-skeletion-info doc-file)))
+       (let* ((output-data (org-noter-plus--pdf-skeletion-info doc-file)))
          (with-current-buffer (org-noter--session-notes-buffer session)
            (widen)
            (save-excursion
@@ -209,9 +221,10 @@ If noter doc is epub: insert epub outline (nov link)"
                               title))
                      (setq level depth)
                      ))
-                 ;; annot
+                 ;; annots
                  (when (not (eq type 'goto-dest))
                    (let* ((type-name (cond
+                                      ;; TODO let user customize this?
                                       ((eq type 'highlight)  "Highlight")
                                       ((eq type 'underline)  "Underline")
                                       ((eq type 'squiggly)   "Squiggly")
@@ -243,7 +256,8 @@ If noter doc is epub: insert epub outline (nov link)"
                                   imagefile
                                   ))
                          ))
-                     ;; other note
+                     ;; other note: put text in quote box,
+                     ;; in order not to break the list structure
                      (when (and
                             (memq type
                                   '(highlight underline squiggly text strike-out))
@@ -266,13 +280,12 @@ If noter doc is epub: insert epub outline (nov link)"
          ))
       ;; extract epub outline
       ((eq (org-noter--session-doc-mode session) 'nov-mode)
-       (let ((output-data (nov-outline-info))
+       (let ((output-data (org-noter-plus--nov-outline-info))
              title depth doc point)
          (with-current-buffer (org-noter--session-notes-buffer session)
            (widen)
            (save-excursion
              (goto-char (org-element-property :end ast))
-
              (dolist (data output-data)
                (setq title (aref data 0)
                      depth (aref data 1)
@@ -297,4 +310,6 @@ If noter doc is epub: insert epub outline (nov link)"
       (t (user-error "This command is only supported on PDF Tools or Nov.")))
      )))
 
+;;;; Footer
 (provide 'org-noter-plus)
+;;; org-noter-plus.el ends here
