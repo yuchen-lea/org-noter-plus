@@ -3,16 +3,16 @@
 * 介绍
 配合[[https://github.com/weirdNox/org-noter][org-noter]]，导出PDF或EPUB文档的大纲及笔记
 * 安装
-Doom emacs 用户：
-#+BEGIN_SRC emacs-lisp
+- 建议使用 use-package
+  #+BEGIN_SRC emacs-lisp
+  (use-package org-noter-plus
+    :straight (org-noter-plus :type git :host github :repo "yuchen-lea/org-noter-plus")
+    )
+  #+END_SRC
+- Doom emacs 用户可以将以下代码添加到 =packages.el= ：
+  #+BEGIN_SRC emacs-lisp
 (package! org-noter-plus :recipe (:host github :repo "yuchen-lea/org-noter-plus"))
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(use-package org-noter-plus
-  :straight (org-noter-plus :type git :host github :repo "yuchen-lea/org-noter-plus")
-  )
-#+END_SRC
+  #+END_SRC
 * 使用
 主要功能就一个：在org-noter的文档视窗中执行 =org-noter-create-skeleton-list= ，会在对应的笔记视窗的末尾插入当前文档的大纲列表。
 
@@ -21,7 +21,7 @@ Doom emacs 用户：
   + 矩形笔记会导出为图片
 - 如果是epub文档：插入epub大纲，要求安装nov
 * 依赖
-💡 建议使用 [[https://github.com/hlissner/doom-emacs/][doom-emacs]]，启用module =:tools pdf=, =:lang org= 并开启 =:lang org= 的 =+noter= flag 即可正常使用 pdf 相关的功能。
+💡 建议使用 [[https://github.com/hlissner/doom-emacs/][doom-emacs]]，启用module [[https://github.com/hlissner/doom-emacs/blob/develop/modules/tools/pdf/README.org][:tools pdf]], [[https://github.com/hlissner/doom-emacs/blob/develop/modules/lang/org/README.org][:lang org]] 并开启 =:lang org= 的 =+noter= flag 即可正常使用 pdf 相关的功能。
 
 - [[https://github.com/weirdNox/org-noter][org-noter]]: 用于定位插入大纲和笔记的位置
 - PDF 相关工具
