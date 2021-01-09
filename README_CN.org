@@ -14,7 +14,7 @@
 (package! org-noter-plus :recipe (:host github :repo "yuchen-lea/org-noter-plus"))
   #+END_SRC
 * 使用
-主要功能就一个：在org-noter的文档视窗中执行 =org-noter-create-skeleton-list= ，会在对应的笔记视窗的末尾插入当前文档的大纲列表。
+主要功能就一个：在org-noter的文档视窗中执行 =org-noter-plus-create-skeleton-list= ，会在对应的笔记视窗的末尾插入当前文档的大纲列表。
 
 - 如果是PDF文档：插入PDF大纲，并在对应大纲位置下插入笔记。
   + 高亮、下划线、波浪线、删除线、文本笔记会导出为文本
