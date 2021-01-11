@@ -47,3 +47,5 @@
 * 配置
 - =org-noter-plus-image-dir= PDF笔记图片的存储目录
 - =org-noter-plus-pdf-link-prefix= PDF链接的前缀，默认为 ~pdf~ ，可按需修改为 ~pdfview~
+* 相关插件
+- [[https://github.com/novoid/extract_pdf_annotations_to_orgmode][novoid/extract_pdf_annotations_to_orgmode: Extracting RepliGo PDF annotations to a Org-mode format snippet (unmaintained!)]] shell 脚本，适用范围较为有限
