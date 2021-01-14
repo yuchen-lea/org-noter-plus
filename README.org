@@ -1,2 +1,4 @@
 
 [[file:README_CN.org][中文文档]]
+
+Extract outline and annotations to a Org-mode note from PDF and EPUB files.

@@ -84,6 +84,7 @@
 
 ;;;;; nov outline data
 (defun org-noter-plus--handle-nov-toc-item (ol depth)
+  ;; (require 'dom)
   (mapcar (lambda (li)
             (mapcar (lambda (a-or-ol)
                       (pcase-exhaustive (dom-tag a-or-ol)
@@ -269,6 +270,7 @@ If noter doc is epub: insert epub outline (nov link)"
                        (end-of-line)
                        )))
                  ))
+             ;; TODO close temp buffer
              (setq ast (org-noter--parse-root))
              (org-noter--narrow-to-root ast)
              (goto-char (org-element-property :begin ast))
