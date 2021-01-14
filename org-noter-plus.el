@@ -283,6 +283,9 @@ If noter doc is epub: insert epub outline (nov link)"
            (widen)
            (save-excursion
              (goto-char (org-element-property :end ast))
+             (insert (format
+                      "%s Skeleton\n"
+                      (make-string level ?*)))
              (dolist (data output-data)
                (setq title (aref data 0)
                      depth (aref data 1)
