@@ -40,6 +40,12 @@
   :type 'string
   )
 
+(defcustom org-noter-plus--toc-script "/Users/yuchen/Works/personal/pdfhelper/pdfhelper.py"
+  "Pdfhelper Script"
+  :type 'string
+  )
+
+
 ;;;; Commands
 ;;;;; pdf info
 (defun org-noter-plus--pdf-skeletion-info (&optional file-or-buffer)
@@ -311,6 +317,27 @@ If noter doc is epub: insert epub outline (nov link)"
        )
       (t (user-error "This command is only supported on PDF Tools or Nov.")))
      )))
+
+;;;;; import & export pdf toc
+(defvar org-noter-plus-toc-path (expand-file-name "toc.org" temporary-file-directory))
+
+(defvar org-noter-plus--pdf-dealing-with nil)
+
+(defun org-noter-plus-export-pdf-toc ()
+  (interactive)
+  (when (derived-mode-p 'pdf-view-mode)
+    (setq org-noter-plus--pdf-dealing-with pdf-view--server-file-name)
+    (let ((cmd (format "python3 '%s' '%s' -e -t '%s'" org-noter-plus--toc-script
+                       pdf-view--server-file-name org-noter-plus-toc-path)))
+      (call-process-shell-command cmd)
+      (find-file org-noter-plus-toc-path))))
+
+(defun org-noter-plus-import-pdf-toc ()
+  (interactive)
+  (let ((cmd (format "python3 '%s' '%s' -i -t '%s'" org-noter-plus--toc-script
+                     org-noter-plus--pdf-dealing-with org-noter-plus-toc-path)))
+    (call-process-shell-command cmd)
+    (setq org-noter-plus--pdf-dealing-with nil)))
 
 ;;;; Footer
 (provide 'org-noter-plus)
