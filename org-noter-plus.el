@@ -319,6 +319,7 @@ If noter doc is epub: insert epub outline (nov link)"
      )))
 
 ;;;;; import & export pdf toc
+;; TODO match the pdfhelper version
 (defvar org-noter-plus-toc-path (expand-file-name "toc.org" temporary-file-directory))
 
 (defvar org-noter-plus--pdf-dealing-with nil)
@@ -327,14 +328,14 @@ If noter doc is epub: insert epub outline (nov link)"
   (interactive)
   (when (derived-mode-p 'pdf-view-mode)
     (setq org-noter-plus--pdf-dealing-with pdf-view--server-file-name)
-    (let ((cmd (format "python3 '%s' '%s' -e -t '%s'" org-noter-plus--toc-script
+    (let ((cmd (format "python3 '%s' '%s' -te --toc-path '%s'" org-noter-plus--toc-script
                        pdf-view--server-file-name org-noter-plus-toc-path)))
       (call-process-shell-command cmd)
       (find-file org-noter-plus-toc-path))))
 
 (defun org-noter-plus-import-pdf-toc ()
   (interactive)
-  (let ((cmd (format "python3 '%s' '%s' -i -t '%s'" org-noter-plus--toc-script
+  (let ((cmd (format "python3 '%s' '%s' -ti --toc-path '%s'" org-noter-plus--toc-script
                      org-noter-plus--pdf-dealing-with org-noter-plus-toc-path)))
     (call-process-shell-command cmd)
     (setq org-noter-plus--pdf-dealing-with nil)))
