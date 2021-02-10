@@ -77,7 +77,7 @@
            (setf (alist-get 'contents annot) (cons old-contents text))
            ;; Square annotations are written to images
            (when (eq type 'square)
-             (pdf-view-extract-region-image (list region) page (cons 1000 1000) pdf-image-buffer)
+             (pdf-view-extract-region-image (list region) page (cons 1000 1000) pdf-image-buffer 1)
              (with-current-buffer pdf-image-buffer
                (write-file imagefile))
              )
@@ -276,7 +276,6 @@ If noter doc is epub: insert epub outline (nov link)"
                        (end-of-line)
                        )))
                  ))
-             ;; TODO close temp buffer
              (setq ast (org-noter--parse-root))
              (org-noter--narrow-to-root ast)
              (goto-char (org-element-property :begin ast))
