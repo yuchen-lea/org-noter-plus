@@ -197,91 +197,20 @@ If noter doc is epub: insert epub outline (nov link)"
       (
        ;; extract pdf outline with annotation
        (eq (org-noter--session-doc-mode session) 'pdf-view-mode)
-       (let* ((output-data (org-noter-plus--pdf-skeletion-info doc-file)))
-         (with-current-buffer (org-noter--session-notes-buffer session)
+       (with-current-buffer (org-noter--session-notes-buffer session)
            (widen)
            (save-excursion
              (goto-char (org-element-property :end ast))
-
              (insert (format
                       "%s Skeleton\n"
                       (make-string level ?*)))
-
-             (dolist (item output-data)
-               (let* ((type  (alist-get 'type item))
-                      (page  (alist-get 'page item)))
-                 ;; outline
-                 (when (and (eq type 'goto-dest) (> page 0))
-                   (let ((depth (alist-get 'depth item))
-                         (title (alist-get 'title item))
-                         (top   (alist-get 'top item))
-                         )
-                     (insert (format
-                              "\n%s- [[%s:%s::%s][%s]]"
-                              (make-string depth ? )
-                              org-noter-plus-pdf-link-prefix
-                              doc-file
-                              page
-                              title))
-                     (setq level depth)
-                     ))
-                 ;; annots
-                 (when (not (eq type 'goto-dest))
-                   (let* ((type-name (cond
-                                      ;; TODO let user customize this?
-                                      ((eq type 'highlight)  "Highlight")
-                                      ((eq type 'underline)  "Underline")
-                                      ((eq type 'squiggly)   "Squiggly")
-                                      ((eq type 'text)       "Text note")
-                                      ((eq type 'square)       "Square")
-                                      ((eq type 'strike-out) "Strikeout")))
-                          (height (nth 1 (assoc-default 'edges item)))
-                          (id (symbol-name (assoc-default 'id item)))
-                          (contents (assoc-default 'contents item))
-                          )
-                     (insert (format
-                              "\n%s- %s [[%s:%s::%s++%s][%s]] %s"
-                              (make-string (+ level 1) ? )
-                              type-name
-                              org-noter-plus-pdf-link-prefix
-                              doc-file
-                              page
-                              height
-                              id
-                              (car contents)
-                              ))
-                     ;; square
-                     (when (eq type 'square)
-                       (let* ((imagefile (concat org-noter-plus-image-dir
-                                                 (file-name-base doc-file)
-                                                 "-" id ".png")))
-                         (insert (format
-                                  " [[file:%s]]"
-                                  imagefile
-                                  ))
-                         ))
-                     ;; other note: put text in quote box,
-                     ;; in order not to break the list structure
-                     (when (and
-                            (memq type
-                                  '(highlight underline squiggly text strike-out))
-                            (cdr contents))
-                       (org-return-indent)
-                       (org-insert-structure-template "quote")
-                       (beginning-of-line)
-                       (insert (format
-                                "%s\n"
-                                (cdr contents)
-                                ))
-                       (end-of-line)
-                       )))
-                 ))
+             (org-noter-plus-insert-annots-by-pdf-tool doc-file)
              (setq ast (org-noter--parse-root))
              (org-noter--narrow-to-root ast)
              (goto-char (org-element-property :begin ast))
              )
            )
-         ))
+       )
       ;; extract epub outline
       ((eq (org-noter--session-doc-mode session) 'nov-mode)
        (let ((output-data (org-noter-plus--nov-outline-info))
@@ -316,6 +245,84 @@ If noter doc is epub: insert epub outline (nov link)"
        )
       (t (user-error "This command is only supported on PDF Tools or Nov.")))
      )))
+
+(defun org-noter-plus-insert-annots-by-pdf-tool (pdf-file)
+  (let* ((output-data (org-noter-plus--pdf-skeletion-info pdf-file)))
+               (dolist (item output-data)
+               (let* ((type  (alist-get 'type item))
+                      (page  (alist-get 'page item))
+                      (level 0))
+                 ;; outline
+                 (when (and (eq type 'goto-dest) (> page 0))
+                   (let ((depth (alist-get 'depth item))
+                         (title (alist-get 'title item))
+                         (top   (alist-get 'top item))
+                         )
+                     (insert (format
+                              "\n%s- [[%s:%s::%s][%s]]"
+                              (make-string depth ? )
+                              org-noter-plus-pdf-link-prefix
+                              pdf-file
+                              page
+                              title))
+                     (setq level depth)
+                     ))
+                 ;; annots
+                 (when (not (eq type 'goto-dest))
+                   (let* ((type-name (cond
+                                      ;; TODO let user customize this?
+                                      ((eq type 'highlight)  "Highlight")
+                                      ((eq type 'underline)  "Underline")
+                                      ((eq type 'squiggly)   "Squiggly")
+                                      ((eq type 'text)       "Text note")
+                                      ((eq type 'square)       "Square")
+                                      ((eq type 'strike-out) "Strikeout")))
+                          (height (nth 1 (assoc-default 'edges item)))
+                          (id (symbol-name (assoc-default 'id item)))
+                          (contents (assoc-default 'contents item))
+                          )
+                     (insert (format
+                              "\n%s- %s [[%s:%s::%s++%s][%s]] %s"
+                              (make-string (+ level 1) ? )
+                              type-name
+                              org-noter-plus-pdf-link-prefix
+                              pdf-file
+                              page
+                              height
+                              id
+                              (car contents)
+                              ))
+                     ;; square
+                     (when (eq type 'square)
+                       (let* ((imagefile (concat org-noter-plus-image-dir
+                                                 (file-name-base pdf-file)
+                                                 "-" id ".png")))
+                         (insert (format
+                                  " [[file:%s]]"
+                                  imagefile
+                                  ))
+                         ))
+                     ;; other note: put text in quote box,
+                     ;; in order not to break the list structure
+                     (when (and
+                            (memq type
+                                  '(highlight underline squiggly text strike-out))
+                            (cdr contents))
+                       (org-return-indent)
+                       (org-insert-structure-template "quote")
+                       (beginning-of-line)
+                       (insert (format
+                                "%s\n"
+                                (cdr contents)
+                                ))
+                       (end-of-line)
+                       )))
+                 ))
+
+         )
+
+  )
+
 
 ;;;;; import & export pdf toc
 ;; TODO match the pdfhelper version
