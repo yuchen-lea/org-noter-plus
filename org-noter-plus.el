@@ -21,7 +21,6 @@
 
 ;;; Code:
 ;;;; Requirements
-(require 'org-noter)
 
 ;;;; Customization
 
@@ -40,12 +39,35 @@
   :type 'string
   )
 
-(defcustom org-noter-plus--toc-script "/Users/yuchen/Works/personal/pdfhelper/pdfhelper.py"
+(defcustom org-noter-plus-pdfhelper-script nil
   "Pdfhelper Script"
   :type 'string
   )
 
+(defcustom org-noter-plus-pdfhelper-toc-item-format "{checkbox} {link}"
+  "Customize toc format."
+  :type 'string
+  )
 
+(defcustom org-noter-plus-pdfhelper-annot-item-format "{color} {link} {content}"
+  "Customize annot format."
+  :type 'string
+  )
+
+(defcustom org-noter-plus-pdfhelper-ocr-api "http://198.18.0.153:8865/predict/chinese_ocr_db_crnn_mobile"
+  "Paddle ocr api."
+  :type 'string
+  )
+
+(defcustom org-noter-plus-pdfhelper-zoom-factor 4
+  "Image zoom factor when extracting rectangle annotations."
+  :type 'integer
+  )
+
+(defcustom org-noter-plus-pdfhelper-with-toc t
+  "Whether to export toc when exporting annotations."
+  :type 'bool
+  )
 ;;;; Commands
 ;;;;; pdf info
 (defun org-noter-plus--pdf-skeletion-info (&optional file-or-buffer)
@@ -188,6 +210,7 @@ Set this function for nov link after nov.el is loaded."
 If noter doc is pdf: insert pdf outline with annotations,
 If noter doc is epub: insert epub outline (nov link)"
   (interactive)
+  (require 'org-noter)
   (org-noter--with-valid-session
    (let* ((doc-file (org-noter--session-property-text session))
           (ast (org-noter--parse-root))
@@ -202,9 +225,15 @@ If noter doc is epub: insert epub outline (nov link)"
            (save-excursion
              (goto-char (org-element-property :end ast))
              (insert (format
-                      "%s Skeleton\n"
+                      "\n%s Skeleton\n"
                       (make-string level ?*)))
-             (org-noter-plus-insert-annots-by-pdf-tool doc-file)
+             (if org-noter-plus-pdfhelper-script
+                 (progn
+                     (bookmark-set "point to insert annots")
+                 (org-noter-plus-insert-annots-by-pdfhelper doc-file)
+)
+               (org-noter-plus-insert-annots-by-pdf-tool doc-file)
+                 )
              (setq ast (org-noter--parse-root))
              (org-noter--narrow-to-root ast)
              (goto-char (org-element-property :begin ast))
@@ -220,7 +249,7 @@ If noter doc is epub: insert epub outline (nov link)"
            (save-excursion
              (goto-char (org-element-property :end ast))
              (insert (format
-                      "%s Skeleton\n"
+                      "\n%s Skeleton\n"
                       (make-string level ?*)))
              (dolist (data output-data)
                (setq title (aref data 0)
@@ -324,6 +353,58 @@ If noter doc is epub: insert epub outline (nov link)"
   )
 
 
+(defun org-noter-plus-insert-annots-by-pdfhelper (pdf-file)
+  (let* ((output-buffer (generate-new-buffer "*Async shell command*"))
+         (async-shell-command-display-buffer nil)
+         (proc (progn
+                 (async-shell-command (org-noter-plus--pdfhelper-annot-export-cmd
+                                       pdf-file)
+                                      output-buffer)
+                 (get-buffer-process output-buffer))))
+    (if (process-live-p proc)
+        (set-process-sentinel proc
+                              #'(lambda (process signal)
+                                  (when (memq (process-status process)
+                                              '(exit signal))
+                                    (bookmark-jump "point to insert annots")
+                                    (sleep-for 1)
+                                    (goto-char (org-element-property :end (org-element-context)))
+                                    (yank)
+                                    (shell-command-sentinel process signal))))
+      (message-box "No process running."))))
+
+
+(defun org-noter-plus--pdfhelper-annot-export-cmd (pdf-file)
+  (let ((test-p (y-or-n-p "Run a test first?"))
+        (ocr-p (y-or-n-p "OCR on picture?"))
+        (zoom-factor (read-from-minibuffer (format "Enter image zoom factor (enter to use default value %s): "
+                                                   org-noter-plus-pdfhelper-zoom-factor))))
+    (setq zoom-factor (if (string-empty-p zoom-factor)
+                          nil
+                        zoom-factor))
+    (mapconcat #'identity
+               (list (format "python3 '%s' '%s' --export-annot"
+                             org-noter-plus-pdfhelper-script pdf-file)
+                     (if org-noter-plus-pdfhelper-with-toc "--with-toc"
+                       "")
+                     (format "--image-zoom %s"
+                             (or zoom-factor org-noter-plus-pdfhelper-zoom-factor))
+                     (if ocr-p
+                         (format "--ocr-api '%s'" org-noter-plus-pdfhelper-ocr-api)
+                       "")
+                     (format "--annot-image-dir '%s'" org-noter-plus-image-dir)
+                     (format "--toc-list-item-format '%s'" org-noter-plus-pdfhelper-toc-item-format)
+                     (format "--annot-list-item-format '%s'" org-noter-plus-pdfhelper-annot-item-format)
+                     (if test-p "--run-test" "")
+                     ;; TODO cross-platform
+                     (format "| %s"
+                             (cond
+                              ((eq system-type 'gnu/linux) "xclip")
+                              ((eq system-type 'darwin) "pbcopy")
+                              ((memq system-type
+                                     '(cygwin windows-nt ms-dos)) "clip.exe"))))
+               " ")))
+
 ;;;;; import & export pdf toc
 ;; TODO match the pdfhelper version
 (defvar org-noter-plus-toc-path (expand-file-name "toc.org" temporary-file-directory))
@@ -334,14 +415,14 @@ If noter doc is epub: insert epub outline (nov link)"
   (interactive)
   (when (derived-mode-p 'pdf-view-mode)
     (setq org-noter-plus--pdf-dealing-with pdf-view--server-file-name)
-    (let ((cmd (format "python3 '%s' '%s' -te --toc-path '%s'" org-noter-plus--toc-script
+    (let ((cmd (format "python3 '%s' '%s' -te --toc-path '%s'" org-noter-plus-pdfhelper-script
                        pdf-view--server-file-name org-noter-plus-toc-path)))
       (call-process-shell-command cmd)
       (find-file org-noter-plus-toc-path))))
 
 (defun org-noter-plus-import-pdf-toc ()
   (interactive)
-  (let ((cmd (format "python3 '%s' '%s' -ti --toc-path '%s'" org-noter-plus--toc-script
+  (let ((cmd (format "python3 '%s' '%s' -ti --toc-path '%s'" org-noter-plus-pdfhelper-script
                      org-noter-plus--pdf-dealing-with org-noter-plus-toc-path)))
     (call-process-shell-command cmd)
     (setq org-noter-plus--pdf-dealing-with nil)))
