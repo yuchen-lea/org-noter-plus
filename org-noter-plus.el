@@ -21,7 +21,6 @@
 
 ;;; Code:
 ;;;; Requirements
-(require 'org-noter)
 
 ;;;; Customization
 
@@ -40,12 +39,35 @@
   :type 'string
   )
 
-(defcustom org-noter-plus--toc-script "/Users/yuchen/Works/personal/pdfhelper/pdfhelper.py"
+(defcustom org-noter-plus-pdfhelper-script nil
   "Pdfhelper Script"
   :type 'string
   )
 
+(defcustom org-noter-plus-pdfhelper-toc-item-format "{checkbox} {link}"
+  "Customize toc format."
+  :type 'string
+  )
 
+(defcustom org-noter-plus-pdfhelper-annot-item-format "{color} {link} {content}"
+  "Customize annot format."
+  :type 'string
+  )
+
+(defcustom org-noter-plus-pdfhelper-ocr-api "http://198.18.0.153:8865/predict/chinese_ocr_db_crnn_mobile"
+  "Paddle ocr api."
+  :type 'string
+  )
+
+(defcustom org-noter-plus-pdfhelper-zoom-factor 4
+  "Image zoom factor when extracting rectangle annotations."
+  :type 'integer
+  )
+
+(defcustom org-noter-plus-pdfhelper-with-toc t
+  "Whether to export toc when exporting annotations."
+  :type 'bool
+  )
 ;;;; Commands
 ;;;;; pdf info
 (defun org-noter-plus--pdf-skeletion-info (&optional file-or-buffer)
@@ -77,7 +99,7 @@
            (setf (alist-get 'contents annot) (cons old-contents text))
            ;; Square annotations are written to images
            (when (eq type 'square)
-             (pdf-view-extract-region-image (list region) page (cons 1000 1000) pdf-image-buffer)
+             (pdf-view-extract-region-image (list region) page (cons 1000 1000) pdf-image-buffer 1)
              (with-current-buffer pdf-image-buffer
                (write-file imagefile))
              )
@@ -188,6 +210,7 @@ Set this function for nov link after nov.el is loaded."
 If noter doc is pdf: insert pdf outline with annotations,
 If noter doc is epub: insert epub outline (nov link)"
   (interactive)
+  (require 'org-noter)
   (org-noter--with-valid-session
    (let* ((doc-file (org-noter--session-property-text session))
           (ast (org-noter--parse-root))
@@ -197,92 +220,26 @@ If noter doc is epub: insert epub outline (nov link)"
       (
        ;; extract pdf outline with annotation
        (eq (org-noter--session-doc-mode session) 'pdf-view-mode)
-       (let* ((output-data (org-noter-plus--pdf-skeletion-info doc-file)))
-         (with-current-buffer (org-noter--session-notes-buffer session)
+       (with-current-buffer (org-noter--session-notes-buffer session)
            (widen)
            (save-excursion
              (goto-char (org-element-property :end ast))
-
              (insert (format
-                      "%s Skeleton\n"
+                      "\n%s Skeleton\n"
                       (make-string level ?*)))
-
-             (dolist (item output-data)
-               (let* ((type  (alist-get 'type item))
-                      (page  (alist-get 'page item)))
-                 ;; outline
-                 (when (and (eq type 'goto-dest) (> page 0))
-                   (let ((depth (alist-get 'depth item))
-                         (title (alist-get 'title item))
-                         (top   (alist-get 'top item))
-                         )
-                     (insert (format
-                              "\n%s- [[%s:%s::%s][%s]]"
-                              (make-string depth ? )
-                              org-noter-plus-pdf-link-prefix
-                              doc-file
-                              page
-                              title))
-                     (setq level depth)
-                     ))
-                 ;; annots
-                 (when (not (eq type 'goto-dest))
-                   (let* ((type-name (cond
-                                      ;; TODO let user customize this?
-                                      ((eq type 'highlight)  "Highlight")
-                                      ((eq type 'underline)  "Underline")
-                                      ((eq type 'squiggly)   "Squiggly")
-                                      ((eq type 'text)       "Text note")
-                                      ((eq type 'square)       "Square")
-                                      ((eq type 'strike-out) "Strikeout")))
-                          (height (nth 1 (assoc-default 'edges item)))
-                          (id (symbol-name (assoc-default 'id item)))
-                          (contents (assoc-default 'contents item))
-                          )
-                     (insert (format
-                              "\n%s- %s [[%s:%s::%s++%s][%s]] %s"
-                              (make-string (+ level 1) ? )
-                              type-name
-                              org-noter-plus-pdf-link-prefix
-                              doc-file
-                              page
-                              height
-                              id
-                              (car contents)
-                              ))
-                     ;; square
-                     (when (eq type 'square)
-                       (let* ((imagefile (concat org-noter-plus-image-dir
-                                                 (file-name-base doc-file)
-                                                 "-" id ".png")))
-                         (insert (format
-                                  " [[file:%s]]"
-                                  imagefile
-                                  ))
-                         ))
-                     ;; other note: put text in quote box,
-                     ;; in order not to break the list structure
-                     (when (and
-                            (memq type
-                                  '(highlight underline squiggly text strike-out))
-                            (cdr contents))
-                       (org-return-indent)
-                       (org-insert-structure-template "quote")
-                       (beginning-of-line)
-                       (insert (format
-                                "%s\n"
-                                (cdr contents)
-                                ))
-                       (end-of-line)
-                       )))
-                 ))
-             ;; TODO close temp buffer
+             (if org-noter-plus-pdfhelper-script
+                 (progn
+                     (bookmark-set "point to insert annots")
+                 (org-noter-plus-insert-annots-by-pdfhelper doc-file)
+)
+               (org-noter-plus-insert-annots-by-pdf-tool doc-file)
+                 )
              (setq ast (org-noter--parse-root))
              (org-noter--narrow-to-root ast)
              (goto-char (org-element-property :begin ast))
              )
            )
-         ))
+       )
       ;; extract epub outline
       ((eq (org-noter--session-doc-mode session) 'nov-mode)
        (let ((output-data (org-noter-plus--nov-outline-info))
@@ -292,7 +249,7 @@ If noter doc is epub: insert epub outline (nov link)"
            (save-excursion
              (goto-char (org-element-property :end ast))
              (insert (format
-                      "%s Skeleton\n"
+                      "\n%s Skeleton\n"
                       (make-string level ?*)))
              (dolist (data output-data)
                (setq title (aref data 0)
@@ -318,7 +275,138 @@ If noter doc is epub: insert epub outline (nov link)"
       (t (user-error "This command is only supported on PDF Tools or Nov.")))
      )))
 
+(defun org-noter-plus-insert-annots-by-pdf-tool (pdf-file)
+  (let* ((output-data (org-noter-plus--pdf-skeletion-info pdf-file)))
+               (dolist (item output-data)
+               (let* ((type  (alist-get 'type item))
+                      (page  (alist-get 'page item))
+                      (level 0))
+                 ;; outline
+                 (when (and (eq type 'goto-dest) (> page 0))
+                   (let ((depth (alist-get 'depth item))
+                         (title (alist-get 'title item))
+                         (top   (alist-get 'top item))
+                         )
+                     (insert (format
+                              "\n%s- [[%s:%s::%s][%s]]"
+                              (make-string depth ? )
+                              org-noter-plus-pdf-link-prefix
+                              pdf-file
+                              page
+                              title))
+                     (setq level depth)
+                     ))
+                 ;; annots
+                 (when (not (eq type 'goto-dest))
+                   (let* ((type-name (cond
+                                      ;; TODO let user customize this?
+                                      ((eq type 'highlight)  "Highlight")
+                                      ((eq type 'underline)  "Underline")
+                                      ((eq type 'squiggly)   "Squiggly")
+                                      ((eq type 'text)       "Text note")
+                                      ((eq type 'square)       "Square")
+                                      ((eq type 'strike-out) "Strikeout")))
+                          (height (nth 1 (assoc-default 'edges item)))
+                          (id (symbol-name (assoc-default 'id item)))
+                          (contents (assoc-default 'contents item))
+                          )
+                     (insert (format
+                              "\n%s- %s [[%s:%s::%s++%s][%s]] %s"
+                              (make-string (+ level 1) ? )
+                              type-name
+                              org-noter-plus-pdf-link-prefix
+                              pdf-file
+                              page
+                              height
+                              id
+                              (car contents)
+                              ))
+                     ;; square
+                     (when (eq type 'square)
+                       (let* ((imagefile (concat org-noter-plus-image-dir
+                                                 (file-name-base pdf-file)
+                                                 "-" id ".png")))
+                         (insert (format
+                                  " [[file:%s]]"
+                                  imagefile
+                                  ))
+                         ))
+                     ;; other note: put text in quote box,
+                     ;; in order not to break the list structure
+                     (when (and
+                            (memq type
+                                  '(highlight underline squiggly text strike-out))
+                            (cdr contents))
+                       (org-return-indent)
+                       (org-insert-structure-template "quote")
+                       (beginning-of-line)
+                       (insert (format
+                                "%s\n"
+                                (cdr contents)
+                                ))
+                       (end-of-line)
+                       )))
+                 ))
+
+         )
+
+  )
+
+
+(defun org-noter-plus-insert-annots-by-pdfhelper (pdf-file)
+  (let* ((output-buffer (generate-new-buffer "*Async shell command*"))
+         (async-shell-command-display-buffer nil)
+         (proc (progn
+                 (async-shell-command (org-noter-plus--pdfhelper-annot-export-cmd
+                                       pdf-file)
+                                      output-buffer)
+                 (get-buffer-process output-buffer))))
+    (if (process-live-p proc)
+        (set-process-sentinel proc
+                              #'(lambda (process signal)
+                                  (when (memq (process-status process)
+                                              '(exit signal))
+                                    (bookmark-jump "point to insert annots")
+                                    (sleep-for 1)
+                                    (goto-char (org-element-property :end (org-element-context)))
+                                    (yank)
+                                    (shell-command-sentinel process signal))))
+      (message-box "No process running."))))
+
+
+(defun org-noter-plus--pdfhelper-annot-export-cmd (pdf-file)
+  (let ((test-p (y-or-n-p "Run a test first?"))
+        (ocr-p (y-or-n-p "OCR on picture?"))
+        (zoom-factor (read-from-minibuffer (format "Enter image zoom factor (enter to use default value %s): "
+                                                   org-noter-plus-pdfhelper-zoom-factor))))
+    (setq zoom-factor (if (string-empty-p zoom-factor)
+                          nil
+                        zoom-factor))
+    (mapconcat #'identity
+               (list (format "python3 '%s' '%s' --export-annot"
+                             org-noter-plus-pdfhelper-script pdf-file)
+                     (if org-noter-plus-pdfhelper-with-toc "--with-toc"
+                       "")
+                     (format "--image-zoom %s"
+                             (or zoom-factor org-noter-plus-pdfhelper-zoom-factor))
+                     (if ocr-p
+                         (format "--ocr-api '%s'" org-noter-plus-pdfhelper-ocr-api)
+                       "")
+                     (format "--annot-image-dir '%s'" org-noter-plus-image-dir)
+                     (format "--toc-list-item-format '%s'" org-noter-plus-pdfhelper-toc-item-format)
+                     (format "--annot-list-item-format '%s'" org-noter-plus-pdfhelper-annot-item-format)
+                     (if test-p "--run-test" "")
+                     ;; TODO cross-platform
+                     (format "| %s"
+                             (cond
+                              ((eq system-type 'gnu/linux) "xclip")
+                              ((eq system-type 'darwin) "pbcopy")
+                              ((memq system-type
+                                     '(cygwin windows-nt ms-dos)) "clip.exe"))))
+               " ")))
+
 ;;;;; import & export pdf toc
+;; TODO match the pdfhelper version
 (defvar org-noter-plus-toc-path (expand-file-name "toc.org" temporary-file-directory))
 
 (defvar org-noter-plus--pdf-dealing-with nil)
@@ -327,14 +415,14 @@ If noter doc is epub: insert epub outline (nov link)"
   (interactive)
   (when (derived-mode-p 'pdf-view-mode)
     (setq org-noter-plus--pdf-dealing-with pdf-view--server-file-name)
-    (let ((cmd (format "python3 '%s' '%s' -e -t '%s'" org-noter-plus--toc-script
+    (let ((cmd (format "python3 '%s' '%s' -te --toc-path '%s'" org-noter-plus-pdfhelper-script
                        pdf-view--server-file-name org-noter-plus-toc-path)))
       (call-process-shell-command cmd)
       (find-file org-noter-plus-toc-path))))
 
 (defun org-noter-plus-import-pdf-toc ()
   (interactive)
-  (let ((cmd (format "python3 '%s' '%s' -i -t '%s'" org-noter-plus--toc-script
+  (let ((cmd (format "python3 '%s' '%s' -ti --toc-path '%s'" org-noter-plus-pdfhelper-script
                      org-noter-plus--pdf-dealing-with org-noter-plus-toc-path)))
     (call-process-shell-command cmd)
     (setq org-noter-plus--pdf-dealing-with nil)))
