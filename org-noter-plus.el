@@ -278,7 +278,7 @@ If noter doc is epub: insert epub outline (nov link)"
                 (title (alist-get 'title item))
                 (top (alist-get 'top item)))
             (insert (format "\n%s- [[%s:%s::%s][%s]]"
-                            (make-string depth ?)
+                            (make-string depth ? )
                             org-noter-plus-pdf-link-prefix
                             pdf-file
                             page
@@ -300,7 +300,7 @@ If noter doc is epub: insert epub outline (nov link)"
                  (contents (assoc-default 'contents item)))
             (insert (format "\n%s- %s [[%s:%s::%s++%s][%s]] %s"
                             (make-string (+ level 1)
-                                         ?)
+                                         ? )
                             type-name
                             org-noter-plus-pdf-link-prefix
                             pdf-file
