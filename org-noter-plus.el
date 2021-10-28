@@ -21,6 +21,7 @@
 
 ;;; Code:
 ;;;; Requirements
+(require 'org-noter)
 
 ;;;; Customization
 
@@ -210,7 +211,6 @@ Set this function for nov link after nov.el is loaded."
 If noter doc is pdf: insert pdf outline with annotations,
 If noter doc is epub: insert epub outline (nov link)"
   (interactive)
-  (require 'org-noter)
   (org-noter--with-valid-session
    (let* ((doc-file (org-noter--session-property-text session))
           (ast (org-noter--parse-root))
