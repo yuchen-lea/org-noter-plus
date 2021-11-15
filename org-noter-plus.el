@@ -145,27 +145,20 @@
          )
     (nov--find-file nov-file-name 0 0)
     (setq nov-buffer (buffer-name))
-    (dolist (item
-             (flatten-tree (org-noter-plus--handle-nov-toc-item toc-tree 1))
-             )
+    (dolist (item (flatten-tree (org-noter-plus--handle-nov-toc-item toc-tree 1)))
       ;; TODO vector or alist?
       (let ((depth  (aref item 1))
             (title  (aref item 3))
-            (url (aref item 5))
-            )
+            (url (aref item 5)))
         (nov-goto-toc)  ;; without this, raise error "Couldn’t locate document"
-        (apply 'nov-visit-relative-file
-               (nov-url-filename-and-target url))
+        (ignore-errors  ;; sometimes can only find the page, not the target
+          (apply 'nov-visit-relative-file (nov-url-filename-and-target url)))
         (when (not (integerp nov-documents-index))
           (setq nov-documents-index 0))
-        (push (vector title depth nov-documents-index (point)) output-data)
-        )
-      )
+        (push (vector title depth nov-documents-index (point)) output-data)))
     (kill-buffer nov-buffer)
     (delete-window)
-    (nreverse output-data)
-    )
-  )
+    (nreverse output-data)))
 
 ;;;;; nov follow link
 (defun org-noter-plus--follow-nov-link (path)
