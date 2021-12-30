@@ -387,6 +387,16 @@ If noter doc is epub: insert epub outline (nov link)"
       (call-process-shell-command cmd)
       (find-file org-noter-plus-toc-path))))
 
+(defun download-toc-from-url ()
+  (interactive)
+  (let* ((url (read-from-minibuffer "Enter china-pub url: "))
+         (cmd (format "python3 '%s' --book-url '%s' --toc-path '%s'"
+                     "/Users/yuchen/Works/personal/pdfhelper/toc_handler.py"
+                     url
+                     org-noter-plus-toc-path)))
+    (call-process-shell-command cmd)
+    (find-file org-noter-plus-toc-path)))
+
 (defun org-noter-plus-import-pdf-toc ()
   (interactive)
   (let ((cmd (format "python3 '%s' '%s' -ti --toc-path '%s'" org-noter-plus-pdfhelper-script
