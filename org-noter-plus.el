@@ -55,11 +55,6 @@
   :type 'string
   )
 
-(defcustom org-noter-plus-pdfhelper-ocr-api "http://198.18.0.153:8865/predict/chinese_ocr_db_crnn_mobile"
-  "Paddle ocr api."
-  :type 'string
-  )
-
 (defcustom org-noter-plus-pdfhelper-zoom-factor 4
   "Image zoom factor when extracting rectangle annotations."
   :type 'integer
@@ -344,8 +339,10 @@ If noter doc is epub: insert epub outline (nov link)"
 
 
 (defun org-noter-plus--pdfhelper-annot-export-cmd (pdf-file)
-  (let ((test-p (y-or-n-p "Run a test first?"))
+  (let* ((test-p (y-or-n-p "Run a test first?"))
         (ocr-p (y-or-n-p "OCR on picture?"))
+        (ocr-service (if ocr-p (ido-completing-read "Pick ocr services:" '("paddle" "ocrspace")) ""))
+        (ocr-language (if (string= ocr-service "ocrspace") (ido-completing-read "Pick ocr language:" '("zh-Hans" "zh-Hant" "en" "ja")) ""))
         (zoom-factor (read-from-minibuffer (format "Enter image zoom factor (enter to use default value %s): "
                                                    org-noter-plus-pdfhelper-zoom-factor))))
     (setq zoom-factor (if (string-empty-p zoom-factor)
@@ -359,8 +356,9 @@ If noter doc is epub: insert epub outline (nov link)"
                      (format "--image-zoom %s"
                              (or zoom-factor org-noter-plus-pdfhelper-zoom-factor))
                      (if ocr-p
-                         (format "--ocr-api '%s'" org-noter-plus-pdfhelper-ocr-api)
+                         (format "--ocr-service '%s'" ocr-service)
                        "")
+                     (format "--ocr-language '%s'" ocr-language)
                      (format "--annot-image-dir '%s'" org-noter-plus-image-dir)
                      (format "--toc-list-item-format '%s'" org-noter-plus-pdfhelper-toc-item-format)
                      (format "--annot-list-item-format '%s'" org-noter-plus-pdfhelper-annot-item-format)
