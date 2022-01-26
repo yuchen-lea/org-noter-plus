@@ -108,7 +108,7 @@
 
 ;;;;; nov outline data
 (defun org-noter-plus--handle-nov-toc-item (ol depth)
-  ;; (require 'dom)
+  (require 'dom)
   (mapcar (lambda (li)
             (mapcar (lambda (a-or-ol)
                       (pcase-exhaustive (dom-tag a-or-ol)
