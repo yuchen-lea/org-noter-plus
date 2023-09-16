@@ -1,3 +1,4 @@
+⭐ v2 is under development and no longer relies on org-noter and pdf-tool.
 
 [[file:README_CN.org][中文文档]]
 
