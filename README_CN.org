@@ -1,51 +1,10 @@
-#+TITLE: org-noter-plus 帮助文档
+#+TITLE: 帮助文档
 
+⭐ v2 版本将不再依赖 [[https://github.com/weirdNox/org-noter][org-noter]] ，专注于笔记的抽取、引文链接的维护等功能。等到 v2 功能完备，v2 将变为主分支。
 * 介绍
-配合[[https://github.com/weirdNox/org-noter][org-noter]]，导出PDF或EPUB文档的大纲及笔记
+帮助你在 org-mode 中更好地进行读书笔记。
 * 安装与配置
-- Doom emacs 用户
-  + 将以下代码添加到 =packages.el= ：
-    #+BEGIN_SRC emacs-lisp
-  (package! org-noter-plus :recipe (:host github :repo "yuchen-lea/org-noter-plus"))
-    #+END_SRC
-  + 在 =config.el= 设置
-    #+BEGIN_SRC emacs-lisp
-(use-package! org-noter-plus
-  :commands (org-noter-plus--follow-nov-link)
-  :config
-  (setq org-noter-plus-image-dir "~/Notes/imgs/") ;; Directory to store images extracted from pdf files
-  )
-
-(after! nov
-  (org-link-set-parameters "nov"
-                           ;; Replace the default nov link to work better with org-noter
-                           :follow 'org-noter-plus--follow-nov-link)
-  )
-    #+END_SRC
-- 建议使用 use-package
-  #+BEGIN_SRC emacs-lisp
-  (use-package org-noter-plus
-    :straight (org-noter-plus :type git :host github :repo "yuchen-lea/org-noter-plus")
-    )
-  #+END_SRC
+- 安装 pdfhelper [[https://github.com/yuchen-lea/pdfhelper][yuchen-lea/pdfhelper: Some useful functions to process pdf file]]
 * 使用
-主要功能就一个：在org-noter的文档视窗中执行 =org-noter-plus-create-skeleton-list= ，会在对应的笔记视窗的末尾插入当前文档的大纲列表。
-
-- 如果是PDF文档：插入PDF大纲，并在对应大纲位置下插入笔记。
-  + 高亮、下划线、波浪线、删除线、文本笔记会导出为文本
-  + 矩形笔记会导出为图片
-- 如果是epub文档：插入epub大纲，要求安装nov
-* 依赖
-💡 建议使用 [[https://github.com/hlissner/doom-emacs/][doom-emacs]]，启用module [[https://github.com/hlissner/doom-emacs/blob/develop/modules/tools/pdf/README.org][:tools pdf]], [[https://github.com/hlissner/doom-emacs/blob/develop/modules/lang/org/README.org][:lang org]] 并开启 =:lang org= 的 =+noter= flag 即可正常使用 pdf 相关的功能。
-
-- [[https://github.com/weirdNox/org-noter][org-noter]]: 用于定位插入大纲和笔记的位置
-- PDF 相关工具
-  + [[https://github.com/politza/pdf-tools#compilation][pdf-tools]] 用于浏览PDF文件，此外它还提供了提取pdf大纲和笔记的功能
-  + [[https://github.com/fuxialexander/org-pdftools][org-pdftools]] 用于打开pdf链接
-- EPUB 相关工具
-  + [[https://github.com/wasamasa/nov.el][nov.el]] : 用于提取epub大纲，打开nov链接
-* 配置
-- =org-noter-plus-image-dir= PDF笔记图片的存储目录
-- =org-noter-plus-pdf-link-prefix= PDF链接的前缀，默认为 ~pdf~ ，可按需修改为 ~pdfview~
 * 相关插件
 - [[https://github.com/novoid/extract_pdf_annotations_to_orgmode][novoid/extract_pdf_annotations_to_orgmode: Extracting RepliGo PDF annotations to a Org-mode format snippet (unmaintained!)]] shell 脚本，适用范围较为有限
